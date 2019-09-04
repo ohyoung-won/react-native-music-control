@@ -1,26 +1,24 @@
 package com.tanguyantoine.react;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.IBinder;
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
+import android.view.KeyEvent;
+
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
-import android.view.KeyEvent;
+
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReadableMap;
 
 import java.util.Map;
 
-import static androidx.core.app.NotificationCompat.PRIORITY_MIN;
-import static com.tanguyantoine.react.MusicControlModule.CHANNEL_ID;
 import static com.tanguyantoine.react.MusicControlModule.NOTIFICATION_ID;
 
 public class MusicControlNotification {
@@ -30,7 +28,7 @@ public class MusicControlNotification {
     protected static final String PACKAGE_NAME = "music_control_package_name";
 
     private final ReactApplicationContext context;
-    private final MusicControlModule module;
+    public final MusicControlModule module;
 
     private int smallIcon;
     private int customIcon;
@@ -84,6 +82,7 @@ public class MusicControlNotification {
      * NOTE: Synchronized since the NotificationService called prepare without a re-entrant lock.
      *       Other call sites (e.g. show/hide in module) are already synchronized.
      */
+    @SuppressLint("RestrictedApi")
     public synchronized Notification prepareNotification(NotificationCompat.Builder builder, boolean isPlaying) {
         // Add the buttons
 
@@ -129,7 +128,7 @@ public class MusicControlNotification {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-            Intent myIntent = new Intent(context, MusicControlNotification.NotificationService.class);
+            Intent myIntent = new Intent(context, NotificationService.class);
             context.stopService(myIntent);
 
         }
@@ -189,6 +188,7 @@ public class MusicControlNotification {
 
         private boolean isRunning;
         private Notification notification;
+        public static MusicControlModule modulePocket;
 
         @Override
         public void onCreate() {
@@ -203,11 +203,20 @@ public class MusicControlNotification {
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (intent.getAction() != null && intent.getAction().equals("StopService") && notification != null && isRunning) {
+                if (intent.getAction() != null && intent.getAction().equals("CLOSE") && notification != null && isRunning) {
                     stopForeground(true);
                     isRunning = false;
                     stopSelf();
+                    modulePocket.getEmitter().onStop();
+                    Log.v("oyw","CLOSE CLICK");
+                }else if(intent.getAction() != null && intent.getAction().equals("PLAY") && notification != null){
+                    modulePocket.getEmitter().onPlay();
+                    Log.v("oyw","PLAY CLICK");
+                }else if(intent.getAction() != null && intent.getAction().equals("PAUSE") && notification != null && isRunning){
+                    modulePocket.getEmitter().onPause();
+                    Log.v("oyw","PAUSE CLICK");
                 }
             }
             return START_NOT_STICKY;
