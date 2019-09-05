@@ -1,24 +1,26 @@
 package com.tanguyantoine.react;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.v4.media.session.PlaybackStateCompat;
-import android.util.Log;
-import android.view.KeyEvent;
-
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.view.KeyEvent;
 import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReadableMap;
 
 import java.util.Map;
 
+import static androidx.core.app.NotificationCompat.PRIORITY_MIN;
+import static com.tanguyantoine.react.MusicControlModule.CHANNEL_ID;
 import static com.tanguyantoine.react.MusicControlModule.NOTIFICATION_ID;
 
 public class MusicControlNotification {
@@ -28,7 +30,7 @@ public class MusicControlNotification {
     protected static final String PACKAGE_NAME = "music_control_package_name";
 
     private final ReactApplicationContext context;
-    public final MusicControlModule module;
+    private final MusicControlModule module;
 
     private int smallIcon;
     private int customIcon;
@@ -59,41 +61,24 @@ public class MusicControlNotification {
     }
 
     public synchronized void updateActions(long mask, Map<String, Integer> options) {
-        play = createAction("play", "Play", mask, PlaybackStateCompat.ACTION_PLAY, play);
+        play = createAction("playicon", "Play", mask, PlaybackStateCompat.ACTION_PLAY, play);
         pause = createAction("pause", "Pause", mask, PlaybackStateCompat.ACTION_PAUSE, pause);
         stop = createAction("stop", "Stop", mask, PlaybackStateCompat.ACTION_STOP, stop);
-        next = createAction("next", "Next", mask, PlaybackStateCompat.ACTION_SKIP_TO_NEXT, next);
-        previous = createAction("previous", "Previous", mask, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS, previous);
-
-        if (options != null && options.containsKey("skipForward") && (options.get("skipForward") == 10 || options.get("skipForward") == 5 || options.get("skipForward") == 30)) {
-            skipForward = createAction("skip_forward_" + options.get("skipForward").toString(), "Skip Forward", mask, PlaybackStateCompat.ACTION_FAST_FORWARD, skipForward);
-        } else {
-            skipForward = createAction("skip_forward_10", "Skip Forward", mask, PlaybackStateCompat.ACTION_FAST_FORWARD, skipForward);
-        }
-
-        if (options != null && options.containsKey("skipBackward") && (options.get("skipBackward") == 10 || options.get("skipBackward") == 5 || options.get("skipBackward") == 30)) {
-            skipBackward = createAction("skip_backward_" + options.get("skipBackward").toString(), "Skip Backward", mask, PlaybackStateCompat.ACTION_REWIND, skipBackward);
-        } else {
-            skipBackward = createAction("skip_backward_10", "Skip Backward", mask, PlaybackStateCompat.ACTION_REWIND, skipBackward);
-        }
     }
 
     /**
      * NOTE: Synchronized since the NotificationService called prepare without a re-entrant lock.
      *       Other call sites (e.g. show/hide in module) are already synchronized.
      */
-    @SuppressLint("RestrictedApi")
     public synchronized Notification prepareNotification(NotificationCompat.Builder builder, boolean isPlaying) {
         // Add the buttons
 
         builder.mActions.clear();
-        if (previous != null) builder.addAction(previous);
-        if (skipBackward != null) builder.addAction(skipBackward);
+
         if (play != null && !isPlaying) builder.addAction(play);
         if (pause != null && isPlaying) builder.addAction(pause);
         if (stop != null) builder.addAction(stop);
-        if (next != null) builder.addAction(next);
-        if (skipForward != null) builder.addAction(skipForward);
+
 
         // Set whether notification can be closed based on closeNotification control (default PAUSED)
         if (module.notificationClose == MusicControlModule.NotificationClose.ALWAYS) {
@@ -128,7 +113,7 @@ public class MusicControlNotification {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-            Intent myIntent = new Intent(context, NotificationService.class);
+            Intent myIntent = new Intent(context, MusicControlNotification.NotificationService.class);
             context.stopService(myIntent);
 
         }
@@ -143,16 +128,10 @@ public class MusicControlNotification {
             return KeyEvent.KEYCODE_MEDIA_PLAY;
         } else if (action == PlaybackStateCompat.ACTION_PAUSE) {
             return KeyEvent.KEYCODE_MEDIA_PAUSE;
-        } else if (action == PlaybackStateCompat.ACTION_SKIP_TO_NEXT) {
-            return KeyEvent.KEYCODE_MEDIA_NEXT;
-        } else if (action == PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS) {
-            return KeyEvent.KEYCODE_MEDIA_PREVIOUS;
+
         } else if (action == PlaybackStateCompat.ACTION_STOP) {
             return KeyEvent.KEYCODE_MEDIA_STOP;
-        } else if (action == PlaybackStateCompat.ACTION_FAST_FORWARD) {
-            return KeyEvent.KEYCODE_MEDIA_FAST_FORWARD;
-        } else if (action == PlaybackStateCompat.ACTION_REWIND) {
-            return KeyEvent.KEYCODE_MEDIA_REWIND;
+
         } else if (action == PlaybackStateCompat.ACTION_PLAY_PAUSE) {
             return KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
         }
@@ -188,7 +167,6 @@ public class MusicControlNotification {
 
         private boolean isRunning;
         private Notification notification;
-        public static MusicControlModule modulePocket;
 
         @Override
         public void onCreate() {
@@ -203,20 +181,11 @@ public class MusicControlNotification {
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (intent.getAction() != null && intent.getAction().equals("CLOSE") && notification != null && isRunning) {
+                if (intent.getAction() != null && intent.getAction().equals("StopService") && notification != null && isRunning) {
                     stopForeground(true);
                     isRunning = false;
                     stopSelf();
-                    modulePocket.getEmitter().onStop();
-                    Log.v("oyw","CLOSE CLICK");
-                }else if(intent.getAction() != null && intent.getAction().equals("PLAY") && notification != null){
-                    modulePocket.getEmitter().onPlay();
-                    Log.v("oyw","PLAY CLICK");
-                }else if(intent.getAction() != null && intent.getAction().equals("PAUSE") && notification != null && isRunning){
-                    modulePocket.getEmitter().onPause();
-                    Log.v("oyw","PAUSE CLICK");
                 }
             }
             return START_NOT_STICKY;

@@ -2,7 +2,6 @@ package com.tanguyantoine.react;
 
 import android.content.Intent;
 import android.os.Build;
-
 import androidx.core.content.ContextCompat;
 
 import com.facebook.react.bridge.Arguments;
