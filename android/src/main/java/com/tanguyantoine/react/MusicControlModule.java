@@ -121,16 +121,7 @@ public class MusicControlModule extends ReactContextBaseJavaModule implements Co
         if (!(Build.MANUFACTURER.toLowerCase(Locale.getDefault()).contains("huawei") && Build.VERSION.SDK_INT < Build.VERSION_CODES.M)) {
             MediaStyle style = new MediaStyle();
             style.setMediaSession(session.getSessionToken());
-            int controlCount = 0;
-            if(hasControl(PlaybackStateCompat.ACTION_PLAY) || hasControl(PlaybackStateCompat.ACTION_PAUSE) || hasControl(PlaybackStateCompat.ACTION_PLAY_PAUSE)) {
-                controlCount += 1;
-            }
-            if(hasControl(PlaybackStateCompat.ACTION_SKIP_TO_NEXT)) {
-                controlCount += 1;
-            }
-            if(hasControl(PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)) {
-                controlCount += 1;
-            }
+            int controlCount = 2;
             int[] actions = new int[controlCount];
             for(int i=0; i<actions.length; i++) {
                 actions[i] = i;
@@ -200,7 +191,7 @@ public class MusicControlModule extends ReactContextBaseJavaModule implements Co
 
         context.registerComponentCallbacks(this);
 
-        isPlaying = false;
+        isPlaying = true;
         init = true;
     }
 
