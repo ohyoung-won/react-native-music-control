@@ -3,6 +3,11 @@
 
     <application>
         <service android:stopWithTask="true" android:name=".MusicControlNotification$NotificationService" />
+        <receiver android:name=".MusicControlReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

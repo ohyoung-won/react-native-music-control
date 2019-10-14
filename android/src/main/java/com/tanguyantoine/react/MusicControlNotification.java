@@ -1,26 +1,22 @@
 package com.tanguyantoine.react;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.IBinder;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.KeyEvent;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReadableMap;
 
 import java.util.Map;
 
-import static androidx.core.app.NotificationCompat.PRIORITY_MIN;
-import static com.tanguyantoine.react.MusicControlModule.CHANNEL_ID;
 import static com.tanguyantoine.react.MusicControlModule.NOTIFICATION_ID;
 
 public class MusicControlNotification {
@@ -44,8 +40,7 @@ public class MusicControlNotification {
         String packageName = context.getPackageName();
 
         // Optional custom icon with fallback to the play icon
-        smallIcon = r.getIdentifier("music_control_icon", "drawable", packageName);
-        if (smallIcon == 0) smallIcon = r.getIdentifier("play", "drawable", packageName);
+        smallIcon = r.getIdentifier("memory_icon", "drawable", packageName);
     }
 
     public synchronized void setCustomNotificationIcon(String resourceName) {
